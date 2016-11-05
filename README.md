@@ -30,8 +30,8 @@ allprojects {
 And add next dependencies in the build.gradle of the module:
 ```gradle
 dependencies {
-    compile "com.github.miguelbcr:RxGpsService:0.0.2"
-    compile "io.reactivex:rxjava:1.1.8"
+    compile "com.github.miguelbcr:RxGpsService:0.0.8"
+    compile "io.reactivex:rxjava:1.1.10"
 }
 ```
 
@@ -112,16 +112,16 @@ RxGpsService.builder(getActivity())
             public NotificationCompat.Builder notificationServiceStarted(Context context) {
                 Bundle extras = new Bundle();
                 extras.putBoolean(RxGpsServiceExtras.SHOW_TIME, true);
-                extras.putString(RxGpsServiceExtras.TEXT_TIME, getString(R.string.time_elapsed));
+                extras.putString(RxGpsServiceExtras.TEXT_TIME, context.getString(R.string.time_elapsed));
                 extras.putBoolean(RxGpsServiceExtras.SHOW_DISTANCE, true);
-                extras.putString(RxGpsServiceExtras.TEXT_DISTANCE, getString(R.string.distance_traveled));
-                extras.putString(RxGpsServiceExtras.BIG_CONTENT_TITLE, getString(R.string.route_details));
+                extras.putString(RxGpsServiceExtras.TEXT_DISTANCE, context.getString(R.string.distance_traveled));
+                extras.putString(RxGpsServiceExtras.BIG_CONTENT_TITLE, context.getString(R.string.route_details));
 
                 return new NotificationCompat.Builder(context)
                                .setContentTitle(context.getString(R.string.app_name))
                                .setContentText(context.getString(R.string.route_started))
                                .setSmallIcon(R.drawable.ic_place)
-                               .setExtras(extras);;
+                               .setExtras(extras);
             }
 
             @Override
@@ -146,7 +146,7 @@ In order to get the latest updated [RouteStats](https://github.com/miguelbcr/RxG
 
 ```java
 public class RouteFragment extends Fragment {
-    private CompositeSubscription subscriptions;
+    private Subscription subscription;
     ....
 
     @Override public void onDestroy() {
@@ -155,16 +155,16 @@ public class RouteFragment extends Fragment {
     }
 
     private void unsubscribe() {
-        if (subscriptions != null) {
-            subscriptions.unsubscribe();
-            subscriptions = null;
+        if (subscription != null) {
+            subscription.unsubscribe();
+            subscription = null;
         }
     }
 
     private void startListenForLocationUpdates() {
         if (RxGpsService.isServiceStarted()) {
-            subscriptions = new CompositeSubscription();
-            subscriptions.add(RxGpsService.instance().onRouteStatsUpdates()
+            unsubscribe()
+            subscription = RxGpsService.instance().onRouteStatsUpdates()
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Action1<RouteStats>() {
@@ -175,10 +175,10 @@ public class RouteFragment extends Fragment {
                     }, new Action1<Throwable>() {
                         @Override
                         public void call(Throwable throwable) {
-                            RxGpsService.stopService(getContext());;
+                            RxGpsService.stopService(getContext());
                             unsubscribe();
                         }
-                    }));
+                    });
         }
     }
 
